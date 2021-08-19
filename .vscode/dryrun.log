@@ -1,0 +1,31 @@
+make all -f "/Users/dks0560227/Documents/other/bounce/build/Makefile" -C "/Users/dks0560227/Documents/other/bounce/build" --dry-run --always-make --keep-going --print-directory
+make: Entering directory `/Users/dks0560227/Documents/other/bounce/build'
+
+/usr/local/Cellar/cmake/3.20.4/bin/cmake -S/Users/dks0560227/Documents/other/bounce/src -B/Users/dks0560227/Documents/other/bounce/build --check-build-system CMakeFiles/Makefile.cmake 0
+/usr/local/Cellar/cmake/3.20.4/bin/cmake -E cmake_progress_start /Users/dks0560227/Documents/other/bounce/build/CMakeFiles /Users/dks0560227/Documents/other/bounce/build//CMakeFiles/progress.marks
+/Library/Developer/CommandLineTools/usr/bin/make -s -f CMakeFiles/Makefile2 all
+
+make[1]: Entering directory `/Users/dks0560227/Documents/other/bounce/build'
+
+/Library/Developer/CommandLineTools/usr/bin/make -s -f CMakeFiles/Bounce.dir/build.make CMakeFiles/Bounce.dir/depend
+
+make[2]: Entering directory `/Users/dks0560227/Documents/other/bounce/build'
+cd /Users/dks0560227/Documents/other/bounce/build && /usr/local/Cellar/cmake/3.20.4/bin/cmake -E cmake_depends "Unix Makefiles" /Users/dks0560227/Documents/other/bounce/src /Users/dks0560227/Documents/other/bounce/src /Users/dks0560227/Documents/other/bounce/build /Users/dks0560227/Documents/other/bounce/build /Users/dks0560227/Documents/other/bounce/build/CMakeFiles/Bounce.dir/DependInfo.cmake --color=
+make[2]: Leaving directory `/Users/dks0560227/Documents/other/bounce/build'
+
+/Library/Developer/CommandLineTools/usr/bin/make -s -f CMakeFiles/Bounce.dir/build.make CMakeFiles/Bounce.dir/build
+
+make[2]: Entering directory `/Users/dks0560227/Documents/other/bounce/build'
+/usr/local/Cellar/cmake/3.20.4/bin/cmake -E cmake_echo_color --switch= --green --progress-dir=/Users/dks0560227/Documents/other/bounce/build/CMakeFiles --progress-num=1 "Building CXX object CMakeFiles/Bounce.dir/main.cpp.o"
+/Library/Developer/CommandLineTools/usr/bin/c++   -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX11.1.sdk -std=gnu++11 -MD -MT CMakeFiles/Bounce.dir/main.cpp.o -MF CMakeFiles/Bounce.dir/main.cpp.o.d -o CMakeFiles/Bounce.dir/main.cpp.o -c /Users/dks0560227/Documents/other/bounce/src/main.cpp
+
+/usr/local/Cellar/cmake/3.20.4/bin/cmake -E cmake_echo_color --switch= --green --bold --progress-dir=/Users/dks0560227/Documents/other/bounce/build/CMakeFiles --progress-num=2 "Linking CXX executable Bounce"
+/usr/local/Cellar/cmake/3.20.4/bin/cmake -E cmake_link_script CMakeFiles/Bounce.dir/link.txt --verbose=
+make[2]: Leaving directory `/Users/dks0560227/Documents/other/bounce/build'
+
+/usr/local/Cellar/cmake/3.20.4/bin/cmake -E cmake_echo_color --switch= --progress-dir=/Users/dks0560227/Documents/other/bounce/build/CMakeFiles --progress-num=1,2 "Built target Bounce"
+make[1]: Leaving directory `/Users/dks0560227/Documents/other/bounce/build'
+
+/usr/local/Cellar/cmake/3.20.4/bin/cmake -E cmake_progress_start /Users/dks0560227/Documents/other/bounce/build/CMakeFiles 0
+make: Leaving directory `/Users/dks0560227/Documents/other/bounce/build'
+

@@ -3,35 +3,33 @@
 #include <chrono>
 #include <thread>
 #include <ncurses.h>
+#include "lib/Actor/Actor.cpp"
+#include "lib/Math/SimpleMath.cpp"
 
 bool killgame = false;		// Exit if true
 int MAX_FPS = 30;		// Fps
+long long lastFrameTime, frameBeginTime, totalFrameTime = 0;
+long long FRAME_DELAY = 20;
+double FPS_SPEED_MULT = 2;	// multiplier for normalized speed
 char msg[50];			// for storing data before printing
 
-int h, w;			// h and w of window
+int h, w, o;			// h and w of window
 const char *me = "@";		// player 'sprite'
 const char *wall = "#";		// wall 'sprite'
-int clicks = 0;			// total registered clicks
+const char *bord = "+";		// border 'sprite'
+int jumps = 0;			// total registered jumps
 
 // PLAYER VARS
-int xi, yi = 0;			// integer values of player coords
-double x, y = 0;		// player coords
-double vx, vy = 0;		// velocity
-double mvx, mvy = 0;		// max velocity
-double rx, ry = 0;		// velocity friction (only use x currently)
-double gx, gy = 0;		// gravity acceleration (only use y currently)
-double bvx, bvy = 0;		// bounce threshold
-double bdvx, bdvy = 0;		// bounce dampening
-bool onGround = true;		// if on the ground (ie not falling) or not
+Actor *a;
 
 // DEBUG
 double lastx, lasty, lastvx, lastvy = 0;
 
 // MAP VARS
-#define levels 10
-#define mapx 70
-#define mapy 40
-int map[levels][mapx][mapy] = { 0 };
+#define NUM_LEVELS 10
+#define NUM_MAP_X 70
+#define NUM_MAP_Y 40
+std::vector < std::vector < std::vector < int >>>map(NUM_LEVELS, std::vector < std::vector < int >>(NUM_MAP_X, std::vector < int >(NUM_MAP_Y, 0)));
 
 std::minstd_rand gen;
 
@@ -54,134 +52,58 @@ void setup()
 	//Capture mouse left clicks
 	//mousemask(BUTTON1_PRESSED | BUTTON1_RELEASED | BUTTON1_CLICKED, NULL);
 	mousemask(ALL_MOUSE_EVENTS, NULL);
+	// Colors
+	start_color();
+	init_pair(1, COLOR_RED, COLOR_BLACK);
 
-	// PHYSICS CONSTANTS //
-	gy = 0.05;		// gravity
-	rx = 0.5;		// friction on ground
-	bvy = 0.25;
-	bdvy = 0.7;
-	bdvx = 0.3;
-	mvx = 1.5; //1
-	mvy = 1.5; //1
+	// Wait for window to be right size:
+	// while (true) {
+	//      getmaxyx(stdscr, h, w);
+	//      h--;
+	//      w--;
+
+	//      if (h < NUM_MAP_Y || w < NUM_MAP_X) {
+	//              // cleanup();
+	//              printf("Screen must be %d x %d\n", NUM_MAP_X, NUM_MAP_Y);
+	//              std::this_thread::sleep_for(std::chrono::seconds(1));
+	//              // exit(1);
+	//      } else {
+	//              break;
+	//      }
+	// }
 
 	// MAPS //
 	gen.seed(std::chrono::system_clock::now().time_since_epoch().count());
 
-	for (int lvl = 0; lvl < levels; lvl++) {
+	// init map
+	// already done when defined
+
+	// add cells
+	for (int lvl = 0; lvl < NUM_LEVELS; lvl++) {
 		for (int i = 0; i < 12; i++) {
-			int r = gen() % (mapx - 12);
+			int r = gen() % (NUM_MAP_X - 12);
 			for (int j = 0; j < 10; j++) {
 				map[lvl][r + j][(3 * i) + (r % 3) - 1] = 1;
 			}
 		}
 	}
+
+	//PLAYER
+	a = new Actor(map);
+
+	// PHYSICS CONSTANTS //
+	a->setMultiplier(1);
+	a->setMaxVelocity(1, 1);
+	a->setGravity(0, -0.05);
+	a->setFriction(0.7, 0);
+	a->setBounceThreshold(0, 0.5);
+	a->setBounceFriction(0.5, 0.7);
 }
 
 void cleanup()
 {
 	//Restore normal terminal functions
 	endwin();
-}
-
-/*double abs(double a) {
-  return a < 0 ? -a : a;
-}*/
-
-double min(double a, double b)
-{
-	return a < b ? a : b;
-}
-
-double max(double a, double b)
-{
-	return a > b ? a : b;
-}
-
-double clamp(double min, double max, double in)
-{
-	if (in >= max) {
-		return max;
-	} else if (in <= min) {
-		return min;
-	} else {
-		return in;
-	}
-}
-
-double approach(double tgt, double amt, double in)
-{
-	return in > tgt ? max(tgt, in - amt) : min(tgt, in + amt);
-}
-
-int level()
-{
-	return ((int)y / mapy);
-}
-
-bool isTouchingWall() {
-  int l = map[level()][xi+1][yi];
-  int r = map[level()][xi+1][yi];
-  return (l && !r) || (!l && r) || xi == mapx-1|| xi == 1;
-}
-
-bool isOnGround()
-{
-	/*if (vx != 0) {
-	   return false;
-	   } */
-
-	// Only "on ground" when falling onto it
-	if (vy > 0) {
-		return false;
-	}
-
-	// Check for platform or bottom of world
-	if ((int)y <= 1 || map[level()][xi][yi - 1]) {
-		return true;
-	}
-
-        return false;
-}
-
-bool canJump()
-{
-	return isOnGround() && vx == 0;
-}
-
-void updatePos()
-{
-	// Clamp velocity to max
-	vx = clamp(-mvx, mvx, vx);
-	vy = clamp(-mvy, mvy, vy);
-
-	// Move character and Clamp character to limits
-	x = clamp(1, mapx - 1, x + vx);
-	y = clamp(1, (mapy * levels) - 1, y + vy);
-
-	// adjust to integer
-	xi = (int)x;
-	yi = (int)y % mapy;
-
-	// Gravity
-	vy -= gy;
-
-        // Bounce off walls and platforms
-        if (isTouchingWall())
-          vx = -vx;
-
-	// Do ground check AFTER move
-	onGround = isOnGround();
-	if (onGround) {
-		// check for bounce
-		if (abs(vy) > bvy) {
-			vy = approach(0, bdvy, -vy);
-			vx = approach(0, rx, vx);
-		} else {
-			vy = 0;
-			vx = approach(0, rx, vx);
-		}
-	}
-
 }
 
 // Check for input from user
@@ -194,16 +116,17 @@ void getInput()
 		case KEY_MOUSE:
 			if (getmouse(&event) == OK) {
 				if (event.bstate & BUTTON1_CLICKED) {
-					clicks++;
-					if (onGround) {
-						vx += (double)(event.x - xi) / 20.0;
-						printf("%d - %d = %f\n", event.x, xi, vx);
-						vy += (double)((h - event.y) - yi) / 10.0;
-						printf("(%d - %d) - %d = %f\n", h, event.y, yi, vy);
+					if (a->isOnGround()) {
+						jumps++;
+						int vxa = (double)((event.x - o) - a->xi()) / 5.0;
+						printf("%d - %d = %f\n", event.x, a->xi(), a->vx);
+						int vya = (double)((h - event.y) - a->yi()) / 5.0;
+						printf("(%d - %d) - %d = %f\n", h, event.y, a->yi(), a->vy);
+						a->addVelocity(vxa, vya);
 						lastx = event.x;
 						lasty = event.y;
-						lastvx = vx;
-						lastvy = vy;
+						lastvx = a->vx;
+						lastvy = a->vy;
 					}
 				}
 			}
@@ -220,59 +143,81 @@ void getInput()
 
 void showOutput()
 {
+	// Clear screen
 	wclear(stdscr);
 
 	// Draw stats
 	wmove(stdscr, 0, 0);
-	sprintf(msg, "%d %d | %d %d | %4.4f %4.4f", clicks, onGround, xi, yi, vx, vy);
+	sprintf(msg, "%d %d | %4.4f %4.4f | %d %d | %d %d", jumps, a->isOnGround(), a->vx, a->vy, a->xi(), a->yi(), a->level(), NUM_LEVELS);
 	waddstr(stdscr, msg);
 	wmove(stdscr, 1, 0);
 	sprintf(msg, "%4.4f %4.4f | %4.4f %4.4f", lastx, lasty, lastvx, lastvy);
 	waddstr(stdscr, msg);
-
-	// Draw player
-	wmove(stdscr, h - yi, xi);
-	waddstr(stdscr, me);
+	totalFrameTime = frameBeginTime - lastFrameTime;
+	FRAME_DELAY = (1000000 / MAX_FPS) - totalFrameTime;
+	wmove(stdscr, 2, 0);
+	sprintf(msg, "%lld | %lld | %4.4f FPS", totalFrameTime, FRAME_DELAY, (double)1000000 / (double)(FRAME_DELAY + totalFrameTime));
+	waddstr(stdscr, msg);
 
 	// Draw map
-	for (int i = 0; i < mapx; i++) {
-		for (int j = 0; j < mapy; j++) {
-			if (map[level()][i][j]) {
-				wmove(stdscr, h - j, i);
+	for (int j = 0; j < NUM_MAP_Y; j++) {
+		wmove(stdscr, h - j, o);
+		waddstr(stdscr, bord);
+		wmove(stdscr, h - j, o + NUM_MAP_X);
+		waddstr(stdscr, bord);
+	}
+	for (int i = 0; i < NUM_MAP_X; i++) {
+		wmove(stdscr, h - NUM_MAP_Y, o + i);
+		waddstr(stdscr, bord);
+		for (int j = 0; j < NUM_MAP_Y; j++) {
+			if (map[a->level()][i][j]) {
+				wmove(stdscr, h - j, o + i);
 				waddstr(stdscr, wall);
 			}
 		}
 	}
+
+	// Draw player
+	wmove(stdscr, h - a->yi(), o + a->xi());
+	attron(COLOR_PAIR(1));
+	waddstr(stdscr, me);
+	attroff(COLOR_PAIR(1));
+
+	// Refresh screen
+	wrefresh(stdscr);
 }
 
 void update()
 {
+	lastFrameTime = frameBeginTime;
+	frameBeginTime = std::chrono::system_clock::now().time_since_epoch().count();
+
 	//Update height and width
 	getmaxyx(stdscr, h, w);
-        h--;
-        w--;
+	h--;
+	w--;
+	// offset for term width
+	o = (w - NUM_MAP_X) / 2;
 
-	if (h < mapy || w < mapx) {
-		cleanup();
-		printf("Screen must be %d x %d\n", mapx, mapy);
-		exit(1);
-	}
-	// Clear screen
-
+	// if (h < NUM_MAP_Y || w < NUM_MAP_X) {
+	//      cleanup();
+	//      printf("Screen must be %d x %d\n", NUM_MAP_X, NUM_MAP_Y);
+	//      exit(1);
+	// }
 	// move char
-	updatePos();
+	a->step();
 
 	getInput();
+
 	showOutput();
 
-	//Update screen
-	wrefresh(stdscr);
-
 	//Move cursor to origin
-	wmove(stdscr, 0, 0);
+	//wmove(stdscr, 0, 0);
+
+	//long long margin = (MAX_FPS / 1000)
 
 	//wait
-	std::this_thread::sleep_for(std::chrono::milliseconds(20));
+	std::this_thread::sleep_for(std::chrono::microseconds(FRAME_DELAY));
 }
 
 int main()

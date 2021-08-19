@@ -1,0 +1,27 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "make and kill",
+            "dependsOn": [
+                "make",
+                "kill term"
+            ]
+        },
+        {
+            "label": "make",
+            "type": "shell",
+            "options": {
+                "cwd": "build"
+            },
+            "command": "make"
+        },
+        {
+            "label": "kill term",
+            "type": "shell",
+            "command": "killall -SIGTERM Terminal || exit 0"
+        }
+    ]
+}
