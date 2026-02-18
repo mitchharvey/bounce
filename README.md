@@ -8,7 +8,6 @@ a simple platformer with mouse controls that runs in your terminal
 
 ### how to build:
 ```sh
-$ apt install cmake libncurses-dev # or equivalent
 $ cd src
 $ cmake
 $ make
